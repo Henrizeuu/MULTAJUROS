@@ -1,0 +1,1142 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lançamento de Multa e Juros</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+:root {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #f8f9fa;
+  --border: #e1e4e8;
+  --text: #15181c;
+  --muted: #5e6772;
+  --accent: #0b6b57;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f1ec;
+  --warn: #8a5300;
+  --warn-soft: #fdf2df;
+  --danger: #b42318;
+  --danger-soft: #fdeceb;
+  --ok: #17733a;
+  --ok-soft: #e4f3e9;
+  --hl: #fff6d1;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101215; --surface: #191c20; --surface-2: #1f2328; --border: #2c3138;
+    --text: #e7e9ec; --muted: #9aa3ad; --accent: #45b89c; --accent-ink: #062019;
+    --accent-soft: #15362e; --warn: #e6a640; --warn-soft: #382a12; --danger: #f08a7f;
+    --danger-soft: #3b1c19; --ok: #62c47f; --ok-soft: #163222; --hl: #3a3317;
+    --shadow: none; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101215; --surface: #191c20; --surface-2: #1f2328; --border: #2c3138;
+  --text: #e7e9ec; --muted: #9aa3ad; --accent: #45b89c; --accent-ink: #062019;
+  --accent-soft: #15362e; --warn: #e6a640; --warn-soft: #382a12; --danger: #f08a7f;
+  --danger-soft: #3b1c19; --ok: #62c47f; --ok-soft: #163222; --hl: #3a3317;
+  --shadow: none; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 14px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
+.topo { background: var(--surface); border-bottom: 1px solid var(--border); }
+.topo-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; flex-wrap: wrap; }
+h1 { font-size: 19px; margin: 0; letter-spacing: -.01em; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+h2 { font-size: 15px; margin: 0 0 10px; }
+h3 { font-size: 14px; margin: 0; }
+main { padding: 18px 16px 48px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+main > *, .painel-grade > * { min-width: 0; }
+.painel-grade { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+#uploadTxt strong { overflow-wrap: anywhere; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+.pad { padding: 16px; }
+.muted { color: var(--muted); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nw { white-space: nowrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.pill.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* upload */
+.drop { border: 2px dashed var(--border); cursor: pointer; transition: border-color .15s, background .15s; }
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop-in { display: flex; align-items: center; gap: 16px; padding: 34px 24px; justify-content: center; text-align: left; }
+.drop-in svg { flex: none; color: var(--accent); }
+.drop-in strong { display: block; font-size: 16px; }
+.drop-in span { color: var(--muted); }
+.drop.compacto .drop-in { padding: 12px 16px; justify-content: flex-start; }
+.drop.compacto .drop-in strong { font-size: 14px; }
+.drop.compacto svg { width: 26px; height: 26px; }
+
+.msg { padding: 12px 14px; border-radius: 8px; font-size: 13px; }
+.msg.erro { background: var(--danger-soft); color: var(--danger); }
+.msg.aviso { background: var(--warn-soft); color: var(--warn); }
+.msg.info { background: var(--accent-soft); color: var(--accent); }
+.msg + .msg { margin-top: 8px; }
+
+/* empresa + parametros */
+.empresa { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 14px 16px; }
+.empresa div { min-width: 0; }
+.empresa .rot { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.empresa .val { font-weight: 600; overflow-wrap: anywhere; }
+.params { display: grid; grid-template-columns: auto 1fr auto; gap: 14px 24px; align-items: center; padding: 14px 16px; }
+.campo-mes .rot { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 4px; }
+.mes { display: flex; align-items: center; gap: 4px; }
+.mes input { font: inherit; font-size: 15px; font-weight: 600; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+.mes-info { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.opcoes { display: grid; gap: 6px; }
+.chk { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; font-size: 13px; }
+.chk input { margin-top: 2px; accent-color: var(--accent); }
+.acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.btn { font: inherit; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+.btn:hover { background: var(--surface-2); }
+.btn.primario { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primario:hover { filter: brightness(1.07); }
+.btn.ic { padding: 6px 10px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn-link { font: inherit; font-size: 12px; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+
+/* kpis */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { padding: 14px 16px; }
+.kpi .rot { font-size: 12px; color: var(--muted); }
+.kpi .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; letter-spacing: -.01em; }
+.kpi .det { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.kpi.destaque { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.kpi.destaque .rot, .kpi.destaque .det { color: inherit; opacity: .85; }
+
+/* abas */
+.abas { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.abas button { font: inherit; font-size: 13px; font-weight: 600; padding: 10px 14px; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.abas button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.abas .cont { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+
+/* tabelas */
+.tw { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; background: var(--surface-2); white-space: nowrap; }
+tbody tr:hover td { background: var(--surface-2); }
+tfoot td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: 0; }
+tr.atual td { background: var(--hl) !important; font-weight: 600; }
+tr.sub td { font-weight: 600; background: var(--surface-2); }
+td.grp { font-weight: 600; }
+.tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.tag.ok { background: var(--ok-soft); color: var(--ok); }
+.tag.warn { background: var(--warn-soft); color: var(--warn); }
+.tag.err { background: var(--danger-soft); color: var(--danger); }
+.tag.neu { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+
+.secao { padding: 16px; }
+.secao + .secao { border-top: 1px solid var(--border); }
+.secao-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.secao-cab h2 { margin: 0; }
+.secao-cab p { margin: 0; font-size: 12px; color: var(--muted); }
+
+/* detalhe por débito */
+.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 540px), 1fr)); gap: 14px; }
+.deb-card { overflow: hidden; }
+.deb-cab { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.deb-cab .t { font-weight: 700; font-size: 15px; }
+.deb-cab .m { font-size: 12px; color: var(--muted); }
+.deb-cab .vl { text-align: right; }
+.deb-cab .vl b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.compo { padding: 8px 14px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+.compo summary { cursor: pointer; }
+
+/* selic */
+.selic-in { width: 84px; font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; text-align: right; background: var(--surface); color: var(--text); font-variant-numeric: tabular-nums; }
+.selic-in.manual { border-color: var(--warn); background: var(--warn-soft); }
+
+.regras { padding: 0; }
+.regras summary { padding: 12px 16px; cursor: pointer; font-weight: 600; }
+.regras ul { margin: 0; padding: 0 16px 16px 34px; color: var(--muted); }
+.regras li { margin: 4px 0; }
+
+.vazio { padding: 28px 16px; text-align: center; color: var(--muted); }
+.carregando { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: gira .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+@keyframes gira { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .params { grid-template-columns: 1fr; }
+  .acoes { justify-content: flex-start; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .kpis { grid-template-columns: 1fr; }
+  .drop-in { flex-direction: column; text-align: center; padding: 24px 16px; }
+}
+@media print {
+  body { background: #fff; color: #000; font-size: 11px; }
+  .topo, #upload, .params .acoes, .abas, .regras, .opcoes, .mes button, .no-print { display: none !important; }
+  .card { box-shadow: none; border-color: #ccc; break-inside: avoid; }
+  main { padding: 0; }
+  .kpi.destaque { background: #fff; color: #000; border-color: #000; }
+}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="topo-in">
+    <div>
+      <h1>Lançamento de Multa e Juros</h1>
+      <p class="sub">Suba o Relatório de Situação Fiscal da Receita, escolha o mês e o sistema separa multa e juros mês a mês.</p>
+    </div>
+    <div id="selicPill" class="pill"><span class="carregando"></span>Selic: consultando Banco Central…</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="upload" class="card drop" tabindex="0" role="button" aria-label="Selecionar PDF do Relatório de Situação Fiscal">
+    <input type="file" id="arquivo" accept="application/pdf,.pdf" hidden>
+    <div class="drop-in">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6"/><path d="m9.5 13.5 2.5-2.5 2.5 2.5"/></svg>
+      <div id="uploadTxt"><strong>Arraste aqui o PDF do Relatório de Situação Fiscal</strong><span>ou clique para selecionar o arquivo</span></div>
+    </div>
+  </section>
+
+  <div id="msgs"></div>
+
+  <section id="painel" hidden>
+    <div class="painel-grade">
+      <div class="card empresa" id="empresa"></div>
+
+      <div class="card params">
+        <div class="campo-mes">
+          <span class="rot">Mês de lançamento</span>
+          <div class="mes">
+            <button class="btn ic" data-passo="-1" aria-label="Mês anterior">‹</button>
+            <input type="month" id="mes">
+            <button class="btn ic" data-passo="1" aria-label="Próximo mês">›</button>
+          </div>
+          <div class="mes-info" id="mesInfo"></div>
+        </div>
+        <div class="opcoes">
+          <label class="chk"><input type="checkbox" id="optINSS"> <span>Agrupar contribuições previdenciárias (CP-SEGUR., CP-PATRONAL, CP-TERCEIROS) como <b>INSS</b></span></label>
+          <label class="chk"><input type="checkbox" id="optSusp"> <span>Incluir débitos com exigibilidade suspensa / a vencer</span></label>
+          <label class="chk"><input type="checkbox" id="opt1"> <span>Considerar o mês de lançamento como mês do pagamento (juros de 1%)</span></label>
+        </div>
+        <div class="acoes">
+          <button class="btn" id="btnPrint">Imprimir</button>
+          <button class="btn primario" id="btnExcel">Exportar Excel</button>
+        </div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+      <div id="avisos"></div>
+
+      <div class="card">
+        <nav class="abas" role="tablist" id="abas">
+          <button role="tab" data-aba="lanc">Lançamento do mês</button>
+          <button role="tab" data-aba="detalhe">Mês a mês por débito</button>
+          <button role="tab" data-aba="debitos">Débitos do relatório</button>
+          <button role="tab" data-aba="selic">Taxa Selic</button>
+        </nav>
+        <div id="conteudo"></div>
+      </div>
+
+      <details class="card regras">
+        <summary>Como o cálculo é feito</summary>
+        <ul>
+          <li><b>Base:</b> saldo devedor de cada débito informado no relatório (coluna “Sdo. Devedor”).</li>
+          <li><b>Multa de mora:</b> 0,33% por dia de atraso, limitada a 20% (Lei 9.430/96, art. 61). A contagem começa no primeiro dia útil após o vencimento (CTN, art. 210) e, no mês de lançamento, vai até o último dia do mês.</li>
+          <li><b>Juros:</b> taxa Selic acumulada de cada mês, a partir do mês seguinte ao vencimento. No mês do vencimento não há juros.</li>
+          <li><b>Selic:</b> buscada automaticamente no Banco Central (série 4390, a mesma usada pela Receita). Mês ainda não encerrado usa 1% até a taxa sair. Você pode ajustar qualquer mês na aba “Taxa Selic”.</li>
+          <li><b>Centavos:</b> truncados, igual à Receita. O valor de cada mês é a diferença entre o acumulado até aquele mês e o acumulado até o mês anterior, então a soma dos meses fecha com o total.</li>
+          <li><b>Conferência:</b> na aba “Débitos do relatório”, o sistema recalcula cada débito na data de emissão do PDF e compara com a multa e os juros que a própria Receita informou.</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+</main>
+
+<script>
+'use strict';
+
+// ---------------------------------------------------------------------------
+// Tabela interna da Selic (% ao mês, Banco Central série 4390). Usada só se a
+// consulta online falhar; a consulta online sempre tem prioridade.
+// ---------------------------------------------------------------------------
+const SELIC_INTERNA = {"2015-01":0.94,"2015-02":0.82,"2015-03":1.04,"2015-04":0.95,"2015-05":0.99,"2015-06":1.07,"2015-07":1.18,"2015-08":1.11,"2015-09":1.11,"2015-10":1.11,"2015-11":1.06,"2015-12":1.16,"2016-01":1.06,"2016-02":1.0,"2016-03":1.16,"2016-04":1.06,"2016-05":1.11,"2016-06":1.16,"2016-07":1.11,"2016-08":1.22,"2016-09":1.11,"2016-10":1.05,"2016-11":1.04,"2016-12":1.12,"2017-01":1.09,"2017-02":0.87,"2017-03":1.05,"2017-04":0.79,"2017-05":0.93,"2017-06":0.81,"2017-07":0.8,"2017-08":0.8,"2017-09":0.64,"2017-10":0.64,"2017-11":0.57,"2017-12":0.54,"2018-01":0.58,"2018-02":0.47,"2018-03":0.53,"2018-04":0.52,"2018-05":0.52,"2018-06":0.52,"2018-07":0.54,"2018-08":0.57,"2018-09":0.47,"2018-10":0.54,"2018-11":0.49,"2018-12":0.49,"2019-01":0.54,"2019-02":0.49,"2019-03":0.47,"2019-04":0.52,"2019-05":0.54,"2019-06":0.47,"2019-07":0.57,"2019-08":0.5,"2019-09":0.46,"2019-10":0.48,"2019-11":0.38,"2019-12":0.37,"2020-01":0.38,"2020-02":0.29,"2020-03":0.34,"2020-04":0.28,"2020-05":0.24,"2020-06":0.21,"2020-07":0.19,"2020-08":0.16,"2020-09":0.16,"2020-10":0.16,"2020-11":0.15,"2020-12":0.16,"2021-01":0.15,"2021-02":0.13,"2021-03":0.2,"2021-04":0.21,"2021-05":0.27,"2021-06":0.31,"2021-07":0.36,"2021-08":0.43,"2021-09":0.44,"2021-10":0.49,"2021-11":0.59,"2021-12":0.77,"2022-01":0.73,"2022-02":0.76,"2022-03":0.93,"2022-04":0.83,"2022-05":1.03,"2022-06":1.02,"2022-07":1.03,"2022-08":1.17,"2022-09":1.07,"2022-10":1.02,"2022-11":1.02,"2022-12":1.12,"2023-01":1.12,"2023-02":0.92,"2023-03":1.17,"2023-04":0.92,"2023-05":1.12,"2023-06":1.07,"2023-07":1.07,"2023-08":1.14,"2023-09":0.97,"2023-10":1.0,"2023-11":0.92,"2023-12":0.89,"2024-01":0.97,"2024-02":0.8,"2024-03":0.83,"2024-04":0.89,"2024-05":0.83,"2024-06":0.79,"2024-07":0.91,"2024-08":0.87,"2024-09":0.84,"2024-10":0.93,"2024-11":0.79,"2024-12":0.93,"2025-01":1.01,"2025-02":0.99,"2025-03":0.96,"2025-04":1.06,"2025-05":1.14,"2025-06":1.1,"2025-07":1.28,"2025-08":1.16,"2025-09":1.22,"2025-10":1.28,"2025-11":1.05,"2025-12":1.22,"2026-01":1.16,"2026-02":1.0,"2026-03":1.21,"2026-04":1.09,"2026-05":1.07,"2026-06":1.12,"2026-07":1.22,"2026-08":1.09,"2026-09":1.08};
+const URL_BCB = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.4390/dados?formato=json&dataInicial=01/01/2010';
+
+const BP_DIA = 33;     // 0,33% ao dia, em centésimos de ponto percentual
+const BP_TETO = 2000;  // 20%
+const BP_MES_PAGTO = 100; // 1% no mês do pagamento
+
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const MESES_C = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const ORDEM_TRIB = ['PIS', 'COFINS', 'INSS', 'IRPJ', 'CSLL', 'IRRF', 'IPI'];
+
+// ---------------------------------------------------------------------------
+// Datas como número inteiro de dias (UTC) para não sofrer com fuso horário
+// ---------------------------------------------------------------------------
+const DIA_MS = 864e5;
+const dnum = (y, m, d) => Math.round(Date.UTC(y, m - 1, d) / DIA_MS);
+const dparts = n => { const t = new Date(n * DIA_MS); return [t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate()]; };
+const dfmt = n => { const [y, m, d] = dparts(n); return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`; };
+const parseData = s => { const [d, m, y] = s.split('/').map(Number); return dnum(y, m, d); };
+const dsem = n => new Date(n * DIA_MS).getUTCDay();
+
+// Meses como índice inteiro (ano*12 + mês-1)
+const midx = (y, m) => y * 12 + m - 1;
+const midxDe = n => { const [y, m] = dparts(n); return midx(y, m); };
+const mAno = i => Math.floor(i / 12);
+const mMes = i => (i % 12) + 1;
+const mChave = i => `${mAno(i)}-${String(mMes(i)).padStart(2, '0')}`;
+const mCurto = i => `${MESES_C[mMes(i) - 1]}/${mAno(i)}`;
+const mLongo = i => { const s = MESES[mMes(i) - 1]; return `${s[0].toUpperCase()}${s.slice(1)}/${mAno(i)}`; };
+const mNum = i => `${String(mMes(i)).padStart(2, '0')}/${mAno(i)}`;
+const mIni = i => dnum(mAno(i), mMes(i), 1);
+const mFim = i => mIni(i + 1) - 1;
+
+const HOJE = (() => { const t = new Date(); return dnum(t.getFullYear(), t.getMonth() + 1, t.getDate()); })();
+const MES_ATUAL = midxDe(HOJE);
+
+// Feriados nacionais (dias sem expediente na Receita)
+function pascoa(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return dnum(y, mes, dia);
+}
+const _feriados = {};
+function feriados(y) {
+  if (!_feriados[y]) {
+    const p = pascoa(y);
+    const s = new Set([dnum(y, 1, 1), dnum(y, 4, 21), dnum(y, 5, 1), dnum(y, 9, 7), dnum(y, 10, 12),
+      dnum(y, 11, 2), dnum(y, 11, 15), dnum(y, 12, 25), p - 48, p - 47, p - 2, p + 60]);
+    if (y >= 2024) s.add(dnum(y, 11, 20));
+    _feriados[y] = s;
+  }
+  return _feriados[y];
+}
+function diaUtil(n) { const w = dsem(n); return w !== 0 && w !== 6 && !feriados(dparts(n)[0]).has(n); }
+// A contagem da multa começa no primeiro dia útil após o vencimento
+function inicioMulta(venc) { let n = venc + 1; while (!diaUtil(n)) n++; return n; }
+
+// ---------------------------------------------------------------------------
+// Formatação
+// ---------------------------------------------------------------------------
+const _brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const _n2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const brl = c => _brl.format(c / 100);
+const pct = bp => _n2.format(bp / 100) + '%';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const centavos = s => parseInt(s.replace(/\./g, '').replace(',', ''), 10);
+
+// ---------------------------------------------------------------------------
+// Estado
+// ---------------------------------------------------------------------------
+const S = {
+  rel: null,          // relatório lido do PDF
+  arquivo: '',
+  mes: null,          // índice do mês de lançamento
+  aba: 'lanc',
+  cfg: { agruparINSS: true, incluirSusp: false, umPorCento: false },
+  selicBCB: null,     // { 'AAAA-MM': bp } só meses encerrados
+  selicFonte: 'carregando',
+  manual: {},         // ajustes manuais { 'AAAA-MM': bp }
+};
+try {
+  const c = JSON.parse(localStorage.getItem('mj_cfg') || 'null');
+  if (c) Object.assign(S.cfg, c);
+  S.manual = JSON.parse(localStorage.getItem('mj_selic_manual') || '{}') || {};
+} catch (e) { /* armazenamento indisponível */ }
+function salvarPrefs() {
+  try {
+    localStorage.setItem('mj_cfg', JSON.stringify(S.cfg));
+    localStorage.setItem('mj_selic_manual', JSON.stringify(S.manual));
+  } catch (e) { /* ignora */ }
+}
+
+// ---------------------------------------------------------------------------
+// Selic
+// ---------------------------------------------------------------------------
+function selicEncerrada(mapa) {
+  const out = {};
+  for (const [k, v] of Object.entries(mapa)) {
+    const [y, m] = k.split('-').map(Number);
+    if (midx(y, m) < MES_ATUAL) out[k] = Math.round(v * 100);
+  }
+  return out;
+}
+async function carregarSelic() {
+  S.selicFonte = 'carregando';
+  pintarPill();
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch(URL_BCB, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const dados = await r.json();
+    const mapa = { ...SELIC_INTERNA };
+    for (const it of dados) {
+      const [, mm, yy] = it.data.split('/');
+      mapa[`${yy}-${mm}`] = parseFloat(it.valor);
+    }
+    S.selicBCB = selicEncerrada(mapa);
+    S.selicFonte = 'bcb';
+  } catch (e) {
+    S.selicBCB = selicEncerrada(SELIC_INTERNA);
+    S.selicFonte = 'interna';
+  }
+  pintarPill();
+  if (S.rel) render();
+}
+function ultimaSelic() {
+  const ks = Object.keys(S.selicBCB || {}).sort();
+  return ks.length ? ks[ks.length - 1] : null;
+}
+function pintarPill() {
+  const el = document.getElementById('selicPill');
+  if (S.selicFonte === 'carregando') {
+    el.className = 'pill';
+    el.innerHTML = '<span class="carregando"></span>Selic: consultando Banco Central…';
+    return;
+  }
+  const u = ultimaSelic();
+  const ate = u ? mCurto(midx(...u.split('-').map(Number))) : '—';
+  if (S.selicFonte === 'bcb') {
+    el.className = 'pill ok';
+    el.innerHTML = `<span class="dot"></span>Selic do Banco Central · até ${ate}`;
+  } else {
+    el.className = 'pill warn';
+    el.innerHTML = `<span class="dot"></span>Sem conexão com o Banco Central · tabela interna até ${ate}`;
+  }
+}
+// Taxa (em bp) usada para o mês i quando o lançamento é do mês M
+function taxaSelic(i, M) {
+  if (S.cfg.umPorCento && i === M) return { bp: BP_MES_PAGTO, origem: 'pagto' };
+  const k = mChave(i);
+  if (S.manual[k] != null) return { bp: S.manual[k], origem: 'manual' };
+  if (S.selicBCB && S.selicBCB[k] != null) return { bp: S.selicBCB[k], origem: 'bcb' };
+  return { bp: BP_MES_PAGTO, origem: 'estimada' };
+}
+
+// ---------------------------------------------------------------------------
+// Leitura do PDF
+// ---------------------------------------------------------------------------
+async function extrairLinhas(buf) {
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const linhas = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    // O relatório da Receita vem em página girada (paisagem): usa as
+    // coordenadas já na orientação de leitura (y cresce para baixo)
+    const vp = page.getViewport({ scale: 1 });
+    const tc = await page.getTextContent();
+    const itens = tc.items
+      .filter(it => it.str && it.str.trim() !== '')
+      .map(it => {
+        const t = pdfjsLib.Util.transform(vp.transform, it.transform);
+        return { x: t[4], y: t[5], w: it.width, s: it.str };
+      });
+    const grupos = [];
+    for (const it of itens) {
+      const g = grupos.find(g => Math.abs(g.y - it.y) < 2.5);
+      if (g) g.itens.push(it); else grupos.push({ y: it.y, itens: [it] });
+    }
+    grupos.sort((a, b) => a.y - b.y);
+    for (const g of grupos) {
+      g.itens.sort((a, b) => a.x - b.x);
+      let txt = '', fim = null;
+      for (const it of g.itens) {
+        if (fim !== null && it.x - fim > 1) txt += ' ';
+        txt += it.s;
+        fim = it.x + it.w;
+      }
+      const t = txt.replace(/\s+/g, ' ').trim();
+      if (t) linhas.push(t);
+    }
+  }
+  return linhas;
+}
+
+const MOEDA = '\\d{1,3}(?:\\.\\d{3})*,\\d{2}';
+const RX_DEB = new RegExp(`^(\\d{4}-\\d{2})\\s*-\\s*(.+?)\\s+(\\d{2}/\\d{2}/\\d{4})((?:\\s+${MOEDA})+)\\s*(.*)$`);
+const RX_INSC = /^(\d{2}\.\d\.\d{2}\.\d{6}-\d{2})\s+(.+?)\s+(\d{2}\/\d{2}\/\d{4})(?:\s+(\d{2}\/\d{2}\/\d{4}))?\s*(.*)$/;
+
+function interpretar(linhas) {
+  const rel = { empresa: '', raiz: '', cnpj: '', emissao: null, debitos: [], inscricoes: [], estabs: new Set() };
+  let secao = '', estab = '';
+  for (const l of linhas) {
+    if (!rel.emissao) {
+      const m = l.match(/(\d{2}\/\d{2}\/\d{4})\s+\d{2}:\d{2}:\d{2}/);
+      if (m) rel.emissao = parseData(m[1]);
+    }
+    if (!rel.empresa) {
+      const m = l.match(/^CNPJ:\s*([\d.]{8,10})\s*-\s*(.+)$/);
+      if (m) { rel.raiz = m[1]; rel.empresa = m[2].trim(); continue; }
+    }
+    const mc = l.match(/^CNPJ:\s*(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/);
+    if (mc) { estab = mc[1]; if (!rel.cnpj) rel.cnpj = estab; continue; }
+    if (/_{4,}/.test(l)) {
+      const t = l.replace(/_+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (/pend[eê]ncia|d[eé]bito|inscri[cç]/i.test(t)) secao = t;
+      continue;
+    }
+    const md = l.match(RX_DEB);
+    if (md) {
+      const toks = md[2].trim().split(' ');
+      let k = toks.length;
+      while (k > 1 && /\d/.test(toks[k - 1])) k--;
+      const nums = md[4].trim().split(/\s+/).map(centavos);
+      const situacao = md[5].trim();
+      const suspensa = /suspens/i.test(secao) || /a vencer|suspens/i.test(situacao);
+      rel.estabs.add(estab);
+      rel.debitos.push({
+        id: rel.debitos.length,
+        secao, estab,
+        codigo: md[1],
+        receita: toks.slice(0, k).join(' '),
+        pa: toks.slice(k).join(' '),
+        venc: parseData(md[3]),
+        original: nums[0],
+        base: nums.length > 1 ? nums[1] : nums[0],
+        multaRFB: nums.length > 2 ? nums[2] : null,
+        jurosRFB: nums.length > 3 ? nums[3] : null,
+        consolidadoRFB: nums.length > 4 ? nums[4] : null,
+        situacao, suspensa,
+        incluir: null, // null = segue a opção geral
+      });
+      continue;
+    }
+    const mi = l.match(RX_INSC);
+    if (mi) rel.inscricoes.push({ inscricao: mi[1], receita: mi[2], inscritoEm: mi[3], secao });
+  }
+  return rel;
+}
+
+// ---------------------------------------------------------------------------
+// Cálculo
+// ---------------------------------------------------------------------------
+const incluido = d => d.incluir != null ? d.incluir : (d.suspensa ? S.cfg.incluirSusp : true);
+
+function tributoDe(d) {
+  if (S.cfg.agruparINSS && /^CP[\s-]/i.test(d.receita)) return 'INSS';
+  return d.receita.replace(/\.$/, '');
+}
+
+// Linhas mês a mês de um débito, do mês do vencimento até o mês M
+function calcularDebito(d, M) {
+  const vm = midxDe(d.venc);
+  if (vm > M) return null;
+  const ini = inicioMulta(d.venc);
+  const linhas = [];
+  let dias = 0, bpM = 0, multaAc = 0, bpJ = 0, jurosAc = 0;
+  for (let i = vm; i <= M; i++) {
+    const de = Math.max(ini, mIni(i)), ate = mFim(i);
+    const diasMes = de > ate ? 0 : ate - de + 1;
+    dias += diasMes;
+    const bpMNovo = Math.min(BP_TETO, dias * BP_DIA);
+    const multaNovo = Math.floor(d.base * bpMNovo / 10000);
+    let tx = { bp: 0, origem: 'venc' };
+    if (i > vm) tx = taxaSelic(i, M);
+    const bpJNovo = bpJ + tx.bp;
+    const jurosNovo = Math.floor(d.base * bpJNovo / 10000);
+    linhas.push({
+      mes: i, dias: diasMes, diasAcum: dias,
+      bpMulta: bpMNovo - bpM, multa: multaNovo - multaAc, bpMultaAcum: bpMNovo, multaAcum: multaNovo,
+      bpSelic: tx.bp, origem: tx.origem, juros: jurosNovo - jurosAc, bpJurosAcum: bpJNovo, jurosAcum: jurosNovo,
+    });
+    bpM = bpMNovo; multaAc = multaNovo; bpJ = bpJNovo; jurosAc = jurosNovo;
+  }
+  if (dias === 0 && jurosAc === 0) return null;
+  return linhas;
+}
+
+// Recalcula na data de emissão do relatório para conferir com a Receita
+function conferir(d, data) {
+  if (d.multaRFB == null || d.jurosRFB == null || !data) return null;
+  const ini = inicioMulta(d.venc);
+  const dias = data >= ini ? data - ini + 1 : 0;
+  const multa = Math.floor(d.base * Math.min(BP_TETO, dias * BP_DIA) / 10000);
+  const vm = midxDe(d.venc), em = midxDe(data);
+  let bp = 0, falta = false;
+  for (let i = vm + 1; i < em; i++) {
+    const k = mChave(i);
+    const v = S.manual[k] != null ? S.manual[k] : (S.selicBCB || {})[k];
+    if (v == null) falta = true; else bp += v;
+  }
+  if (em > vm) bp += BP_MES_PAGTO;
+  const juros = Math.floor(d.base * bp / 10000);
+  return { multa, juros, falta, ok: multa === d.multaRFB && juros === d.jurosRFB };
+}
+
+function ordemTrib(t) { const i = ORDEM_TRIB.indexOf(t); return i < 0 ? 99 : i; }
+
+function calcular() {
+  const M = S.mes;
+  const rel = S.rel;
+  const multiEstab = rel.estabs.size > 1;
+  const mapa = new Map();
+  const ignorados = [];
+  for (const d of rel.debitos) {
+    if (!incluido(d)) continue;
+    const linhas = calcularDebito(d, M);
+    if (!linhas) { ignorados.push({ d, motivo: midxDe(d.venc) > M ? `vence depois de ${mCurto(M)}` : `sem atraso até o fim de ${mCurto(M)}` }); continue; }
+    const tributo = tributoDe(d);
+    const agrupa = tributo === 'INSS';
+    const chave = [tributo, d.pa, d.venc, multiEstab ? d.estab : '', agrupa ? '' : d.codigo].join('|');
+    let g = mapa.get(chave);
+    if (!g) {
+      g = { chave, tributo, pa: d.pa, venc: d.venc, estab: d.estab, base: 0, debitos: [], linhas: null };
+      mapa.set(chave, g);
+    }
+    g.base += d.base;
+    g.debitos.push({ d, linhas });
+  }
+  const grupos = [...mapa.values()];
+  for (const g of grupos) {
+    const ref = g.debitos[0].linhas;
+    g.linhas = ref.map((l, j) => {
+      const soma = k => g.debitos.reduce((s, x) => s + x.linhas[j][k], 0);
+      return { ...l, multa: soma('multa'), multaAcum: soma('multaAcum'), juros: soma('juros'), jurosAcum: soma('jurosAcum') };
+    });
+    g.mesLanc = g.linhas[g.linhas.length - 1];
+    g.codigos = [...new Set(g.debitos.map(x => x.d.codigo))];
+    g.rotulo = `${g.tributo}${g.tributo !== 'INSS' && g.codigos.length === 1 && !S.cfg.agruparINSS && /^CP/i.test(g.tributo) ? ' ' + g.codigos[0] : ''}`;
+  }
+  grupos.sort((a, b) => a.venc - b.venc || ordemTrib(a.tributo) - ordemTrib(b.tributo) || a.tributo.localeCompare(b.tributo) || a.codigos[0].localeCompare(b.codigos[0]));
+
+  const tribs = new Map();
+  for (const g of grupos) {
+    const t = tribs.get(g.tributo) || { tributo: g.tributo, multa: 0, juros: 0, multaAcum: 0, jurosAcum: 0, base: 0 };
+    t.multa += g.mesLanc.multa; t.juros += g.mesLanc.juros;
+    t.multaAcum += g.mesLanc.multaAcum; t.jurosAcum += g.mesLanc.jurosAcum; t.base += g.base;
+    tribs.set(g.tributo, t);
+  }
+  const porTributo = [...tribs.values()].sort((a, b) => ordemTrib(a.tributo) - ordemTrib(b.tributo) || a.tributo.localeCompare(b.tributo));
+  const listaTrib = porTributo.map(t => t.tributo);
+
+  const evolucao = [];
+  if (grupos.length) {
+    const ini = Math.min(...grupos.map(g => g.linhas[0].mes));
+    for (let i = ini; i <= M; i++) {
+      const e = { mes: i, multa: 0, juros: 0, trib: {} };
+      for (const t of listaTrib) e.trib[t] = { multa: 0, juros: 0 };
+      for (const g of grupos) {
+        const l = g.linhas.find(x => x.mes === i);
+        if (!l) continue;
+        e.multa += l.multa; e.juros += l.juros;
+        e.trib[g.tributo].multa += l.multa; e.trib[g.tributo].juros += l.juros;
+      }
+      evolucao.push(e);
+    }
+  }
+
+  const soma = (arr, k) => arr.reduce((s, x) => s + x[k], 0);
+  const estimadas = new Set();
+  for (const g of grupos) for (const l of g.linhas) if (l.origem === 'estimada') estimadas.add(l.mes);
+
+  return {
+    M, grupos, porTributo, listaTrib, evolucao, ignorados, estimadas: [...estimadas].sort((a, b) => a - b),
+    totais: {
+      multa: soma(porTributo, 'multa'), juros: soma(porTributo, 'juros'),
+      multaAcum: soma(porTributo, 'multaAcum'), jurosAcum: soma(porTributo, 'jurosAcum'), base: soma(porTributo, 'base'),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Interface
+// ---------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+
+function mensagem(html, tipo = 'info') {
+  $('msgs').innerHTML = html ? `<div class="msg ${tipo}">${html}</div>` : '';
+}
+
+async function processarArquivo(file) {
+  if (!file) return;
+  mensagem('<span class="carregando"></span>Lendo o PDF…');
+  try {
+    if (typeof pdfjsLib === 'undefined') throw new Error('Não foi possível carregar o leitor de PDF (verifique a conexão com a internet).');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const buf = await file.arrayBuffer();
+    const linhas = await extrairLinhas(buf);
+    if (!linhas.length) throw new Error('O PDF não tem texto legível. Ele precisa ser o PDF original gerado pelo e-CAC, não uma imagem digitalizada.');
+    const rel = interpretar(linhas);
+    if (!rel.debitos.length && !rel.inscricoes.length) {
+      mensagem(`Não encontrei débitos no arquivo <b>${esc(file.name)}</b>. Confira se é o Relatório de Situação Fiscal da Receita Federal (e-CAC). Se o relatório estiver sem pendências, não há multa e juros a lançar.`, 'aviso');
+      return;
+    }
+    S.rel = rel;
+    S.arquivo = file.name;
+    if (S.mes == null) S.mes = rel.emissao ? midxDe(rel.emissao) : MES_ATUAL;
+    mensagem('');
+    $('upload').classList.add('compacto');
+    $('uploadTxt').innerHTML = `<strong>${esc(file.name)}</strong><span>Clique ou arraste outro PDF para trocar</span>`;
+    $('painel').hidden = false;
+    render();
+  } catch (e) {
+    console.error(e);
+    mensagem(`Erro ao ler o PDF: ${esc(e.message || e)}`, 'erro');
+  }
+}
+
+function render() {
+  if (!S.rel) return;
+  const rel = S.rel;
+  const R = calcular();
+  S.ultimo = R;
+
+  // Empresa
+  const nDeb = rel.debitos.length;
+  $('empresa').innerHTML = `
+    <div><span class="rot">Empresa</span><span class="val">${esc(rel.empresa || '—')}</span></div>
+    <div><span class="rot">CNPJ</span><span class="val">${esc(rel.cnpj || rel.raiz || '—')}</span></div>
+    <div><span class="rot">Relatório emitido em</span><span class="val">${rel.emissao ? dfmt(rel.emissao) : '—'}</span></div>
+    <div><span class="rot">Débitos lidos</span><span class="val">${nDeb}${rel.inscricoes.length ? ` + ${rel.inscricoes.length} inscrição(ões) PGFN` : ''}</span></div>`;
+
+  // Parâmetros
+  $('mes').value = mChave(S.mes);
+  $('mesInfo').textContent = `Conta todos os dias de ${mLongo(S.mes).toLowerCase()} (01 a ${String(dparts(mFim(S.mes))[2]).padStart(2, '0')}).`;
+  $('optINSS').checked = S.cfg.agruparINSS;
+  $('optSusp').checked = S.cfg.incluirSusp;
+  $('opt1').checked = S.cfg.umPorCento;
+
+  // KPIs
+  const t = R.totais;
+  $('kpis').innerHTML = `
+    <div class="card kpi"><div class="rot">Multa de ${mCurto(R.M)}</div><div class="v">${brl(t.multa)}</div><div class="det">acumulada: ${brl(t.multaAcum)}</div></div>
+    <div class="card kpi"><div class="rot">Juros de ${mCurto(R.M)}</div><div class="v">${brl(t.juros)}</div><div class="det">acumulados: ${brl(t.jurosAcum)}</div></div>
+    <div class="card kpi destaque"><div class="rot">Total a lançar em ${mCurto(R.M)}</div><div class="v">${brl(t.multa + t.juros)}</div><div class="det">multa + juros do mês</div></div>
+    <div class="card kpi"><div class="rot">Principal em atraso</div><div class="v">${brl(t.base)}</div><div class="det">atualizado: ${brl(t.base + t.multaAcum + t.jurosAcum)}</div></div>`;
+
+  // Avisos
+  const av = [];
+  if (R.estimadas.length) {
+    av.push(`<div class="msg aviso">Selic de <b>${R.estimadas.map(mCurto).join(', ')}</b> ainda não divulgada: foi usado 1% para os juros. Quando a taxa sair, o sistema atualiza sozinho (ou ajuste na aba “Taxa Selic”).</div>`);
+  }
+  const susp = rel.debitos.filter(d => d.suspensa && !incluido(d)).length;
+  if (susp) av.push(`<div class="msg info">${susp} débito(s) com exigibilidade suspensa / a vencer não entraram no cálculo. Marque a opção acima ou escolha na aba “Débitos do relatório”.</div>`);
+  if (rel.inscricoes.length) av.push(`<div class="msg info">O relatório tem ${rel.inscricoes.length} inscrição(ões) em dívida ativa na PGFN (${rel.inscricoes.map(i => esc(i.inscricao + ' · ' + i.receita)).join('; ')}). O relatório não traz o valor delas, então ficam fora do cálculo.</div>`);
+  $('avisos').innerHTML = av.join('');
+
+  // Abas
+  const nIncl = rel.debitos.filter(incluido).length;
+  for (const b of $('abas').querySelectorAll('button')) {
+    b.setAttribute('aria-selected', String(b.dataset.aba === S.aba));
+    if (b.dataset.aba === 'debitos') b.innerHTML = `Débitos do relatório <span class="cont">${nIncl}/${nDeb}</span>`;
+    if (b.dataset.aba === 'detalhe') b.innerHTML = `Mês a mês por débito <span class="cont">${R.grupos.length}</span>`;
+  }
+  const abas = { lanc: abaLancamento, detalhe: abaDetalhe, debitos: abaDebitos, selic: abaSelic };
+  $('conteudo').innerHTML = abas[S.aba](R);
+}
+
+function abaLancamento(R) {
+  if (!R.grupos.length) return `<div class="vazio">Nenhum débito em atraso até ${mLongo(R.M).toLowerCase()} com as opções atuais.</div>`;
+  const M = R.M;
+  let h = `<div class="secao">
+    <div class="secao-cab"><h2>Resumo para o lançamento contábil — ${mLongo(M)}</h2><p>Valores do mês (multa e juros apropriados em ${mCurto(M)})</p></div>
+    <div class="tw"><table>
+      <thead><tr><th>Tributo</th><th class="num">Multa do mês</th><th class="num">Juros do mês</th><th class="num">Total do mês</th><th class="num">Multa acumulada</th><th class="num">Juros acumulados</th></tr></thead><tbody>`;
+  for (const t of R.porTributo) {
+    h += `<tr><td class="grp">${esc(t.tributo)}</td><td class="num">${brl(t.multa)}</td><td class="num">${brl(t.juros)}</td><td class="num"><b>${brl(t.multa + t.juros)}</b></td><td class="num muted">${brl(t.multaAcum)}</td><td class="num muted">${brl(t.jurosAcum)}</td></tr>`;
+  }
+  const T = R.totais;
+  h += `</tbody><tfoot><tr><td>Total</td><td class="num">${brl(T.multa)}</td><td class="num">${brl(T.juros)}</td><td class="num">${brl(T.multa + T.juros)}</td><td class="num">${brl(T.multaAcum)}</td><td class="num">${brl(T.jurosAcum)}</td></tr></tfoot></table></div></div>`;
+
+  h += `<div class="secao">
+    <div class="secao-cab"><h2>Por competência</h2><p>Cada débito no mês de ${mLongo(M).toLowerCase()}</p></div>
+    <div class="tw"><table>
+      <thead><tr><th>Tributo</th><th>Comp.</th><th>Vencimento</th><th class="num">Principal</th><th class="num">Dias no mês</th><th class="num">% multa</th><th class="num">Multa</th><th class="num">Selic</th><th class="num">Juros</th><th class="num">Total</th></tr></thead><tbody>`;
+  for (const g of R.grupos) {
+    const l = g.mesLanc;
+    const teto = l.bpMultaAcum >= BP_TETO;
+    h += `<tr><td class="grp">${esc(g.rotulo)}</td><td>${esc(g.pa)}</td><td>${dfmt(g.venc)}</td><td class="num">${brl(g.base)}</td>
+      <td class="num">${l.dias}</td><td class="num">${pct(l.bpMulta)}${teto ? ' <span class="tag neu" title="Multa já chegou ao limite de 20%">teto</span>' : ''}</td><td class="num">${brl(l.multa)}</td>
+      <td class="num">${l.origem === 'venc' ? '<span class="muted">—</span>' : pct(l.bpSelic) + tagOrigem(l.origem)}</td><td class="num">${brl(l.juros)}</td><td class="num"><b>${brl(l.multa + l.juros)}</b></td></tr>`;
+  }
+  h += `</tbody><tfoot><tr><td colspan="3">Total</td><td class="num">${brl(T.base)}</td><td></td><td></td><td class="num">${brl(T.multa)}</td><td></td><td class="num">${brl(T.juros)}</td><td class="num">${brl(T.multa + T.juros)}</td></tr></tfoot></table></div></div>`;
+
+  h += `<div class="secao">
+    <div class="secao-cab"><h2>Separado por mês</h2><p>Multa e juros de todos os débitos, mês a mês até ${mCurto(M)}</p></div>
+    <div class="tw"><table><thead><tr><th>Mês</th>`;
+  for (const t of R.listaTrib) h += `<th class="num">${esc(t)} multa</th><th class="num">${esc(t)} juros</th>`;
+  h += `<th class="num">Multa</th><th class="num">Juros</th><th class="num">Total</th></tr></thead><tbody>`;
+  let sm = 0, sj = 0;
+  for (const e of R.evolucao) {
+    sm += e.multa; sj += e.juros;
+    h += `<tr class="${e.mes === M ? 'atual' : ''}"><td>${mCurto(e.mes)}</td>`;
+    for (const t of R.listaTrib) h += `<td class="num">${brl(e.trib[t].multa)}</td><td class="num">${brl(e.trib[t].juros)}</td>`;
+    h += `<td class="num">${brl(e.multa)}</td><td class="num">${brl(e.juros)}</td><td class="num"><b>${brl(e.multa + e.juros)}</b></td></tr>`;
+  }
+  h += `</tbody><tfoot><tr><td>Total</td>`;
+  for (const t of R.listaTrib) {
+    const tt = R.porTributo.find(x => x.tributo === t);
+    h += `<td class="num">${brl(tt.multaAcum)}</td><td class="num">${brl(tt.jurosAcum)}</td>`;
+  }
+  h += `<td class="num">${brl(sm)}</td><td class="num">${brl(sj)}</td><td class="num">${brl(sm + sj)}</td></tr></tfoot></table></div></div>`;
+
+  if (R.ignorados.length) {
+    h += `<div class="secao"><p class="muted" style="margin:0;font-size:12px">Fora deste mês: ${R.ignorados.map(x => `${esc(x.d.codigo)} ${esc(x.d.receita)} ${esc(x.d.pa)} (${x.motivo})`).join('; ')}.</p></div>`;
+  }
+  return h;
+}
+
+function tagOrigem(o) {
+  if (o === 'estimada') return ' <span class="tag warn" title="Selic do mês ainda não divulgada">1% est.</span>';
+  if (o === 'pagto') return ' <span class="tag neu" title="Mês do pagamento">pagto</span>';
+  if (o === 'manual') return ' <span class="tag warn" title="Taxa ajustada manualmente">manual</span>';
+  return '';
+}
+
+function abaDetalhe(R) {
+  if (!R.grupos.length) return `<div class="vazio">Nenhum débito em atraso até ${mLongo(R.M).toLowerCase()}.</div>`;
+  let h = '<div class="secao"><div class="grade">';
+  for (const g of R.grupos) {
+    const ult = g.mesLanc;
+    h += `<div class="card deb-card">
+      <div class="deb-cab">
+        <div><div class="t">${esc(g.rotulo)} — Comp. ${esc(g.pa)}</div><div class="m">Vencimento ${dfmt(g.venc)} · multa conta a partir de ${dfmt(inicioMulta(g.venc))}${S.rel.estabs.size > 1 ? ' · ' + esc(g.estab) : ''}</div></div>
+        <div class="vl"><div class="m">Principal</div><b>${brl(g.base)}</b></div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th>Mês</th><th class="num">Dias em atraso</th><th class="num">% Multa</th><th class="num">Vlr da multa</th><th class="num">Selic</th><th class="num">Vlr dos juros</th></tr></thead><tbody>`;
+    for (const l of g.linhas) {
+      h += `<tr class="${l.mes === R.M ? 'atual' : ''}"><td>${mCurto(l.mes)}</td><td class="num">${l.dias}</td><td class="num">${pct(l.bpMulta)}</td><td class="num">${brl(l.multa)}</td>
+        <td class="num">${l.origem === 'venc' ? '<span class="muted" title="Mês do vencimento: sem juros">—</span>' : pct(l.bpSelic) + tagOrigem(l.origem)}</td><td class="num">${brl(l.juros)}</td></tr>`;
+    }
+    h += `</tbody><tfoot><tr><td>Total</td><td class="num">${ult.diasAcum}</td><td class="num">${pct(ult.bpMultaAcum)}</td><td class="num">${brl(ult.multaAcum)}</td><td class="num">${pct(ult.bpJurosAcum)}</td><td class="num">${brl(ult.jurosAcum)}</td></tr>
+      <tr><td colspan="5">Total atualizado (principal + multa + juros)</td><td class="num">${brl(g.base + ult.multaAcum + ult.jurosAcum)}</td></tr></tfoot></table></div>`;
+    if (g.debitos.length > 1) {
+      h += `<details class="compo"><summary>Composição: ${g.debitos.length} códigos de receita</summary><div class="tw"><table><thead><tr><th>Código</th><th>Receita</th><th class="num">Saldo devedor</th><th class="num">Multa acum.</th><th class="num">Juros acum.</th></tr></thead><tbody>`;
+      for (const x of g.debitos) {
+        const u = x.linhas[x.linhas.length - 1];
+        h += `<tr><td>${esc(x.d.codigo)}</td><td>${esc(x.d.receita)}</td><td class="num">${brl(x.d.base)}</td><td class="num">${brl(u.multaAcum)}</td><td class="num">${brl(u.jurosAcum)}</td></tr>`;
+      }
+      h += `</tbody></table></div></details>`;
+    }
+    h += `</div>`;
+  }
+  return h + '</div></div>';
+}
+
+function abaDebitos() {
+  const rel = S.rel;
+  const multi = rel.estabs.size > 1;
+  let h = `<div class="secao"><div class="secao-cab"><h2>Débitos lidos do PDF</h2><p>Desmarque o que não deve entrar no lançamento. A conferência recalcula na data de emissão (${rel.emissao ? dfmt(rel.emissao) : '—'}) e compara com a Receita.</p></div>
+    <div class="tw"><table><thead><tr><th></th><th>Seção</th>${multi ? '<th>CNPJ</th>' : ''}<th>Código</th><th>Receita</th><th>PA</th><th>Vencimento</th><th class="num">Vl. original</th><th class="num">Saldo devedor</th><th class="num">Multa RFB</th><th class="num">Juros RFB</th><th>Conferência</th><th>Situação</th></tr></thead><tbody>`;
+  for (const d of rel.debitos) {
+    const c = conferir(d, rel.emissao);
+    let conf = '<span class="muted">—</span>';
+    if (c) {
+      if (c.ok) conf = '<span class="tag ok">confere</span>';
+      else if (c.falta) conf = '<span class="tag warn">falta Selic</span>';
+      else conf = `<span class="tag err" title="Calculado: multa ${brl(c.multa)} / juros ${brl(c.juros)}">difere</span> <span class="muted" style="font-size:12px">calc. ${brl(c.multa)} / ${brl(c.juros)}</span>`;
+    }
+    const secCurta = d.secao.replace(/^Pend[eê]ncia\s*-\s*/i, '');
+    h += `<tr><td><input type="checkbox" data-deb="${d.id}" ${incluido(d) ? 'checked' : ''} aria-label="Incluir débito"></td>
+      <td style="font-size:12px">${esc(secCurta)}</td>${multi ? `<td style="font-size:12px">${esc(d.estab)}</td>` : ''}<td class="nw">${esc(d.codigo)}</td><td class="nw">${esc(d.receita)}</td><td class="nw">${esc(d.pa)}</td><td>${dfmt(d.venc)}</td>
+      <td class="num">${brl(d.original)}</td><td class="num">${brl(d.base)}</td><td class="num">${d.multaRFB != null ? brl(d.multaRFB) : '—'}</td><td class="num">${d.jurosRFB != null ? brl(d.jurosRFB) : '—'}</td>
+      <td>${conf}</td><td style="font-size:12px">${esc(d.situacao)}</td></tr>`;
+  }
+  h += `</tbody></table></div></div>`;
+  if (rel.inscricoes.length) {
+    h += `<div class="secao"><div class="secao-cab"><h2>Inscrições em dívida ativa (PGFN)</h2><p>Sem valores no relatório, ficam fora do cálculo</p></div><div class="tw"><table><thead><tr><th>Inscrição</th><th>Receita</th><th>Inscrito em</th></tr></thead><tbody>`;
+    for (const i of rel.inscricoes) h += `<tr><td>${esc(i.inscricao)}</td><td>${esc(i.receita)}</td><td>${esc(i.inscritoEm)}</td></tr>`;
+    h += `</tbody></table></div></div>`;
+  }
+  return h;
+}
+
+function abaSelic(R) {
+  const vencs = S.rel.debitos.filter(incluido).map(d => midxDe(d.venc));
+  const ini = vencs.length ? Math.min(...vencs) + 1 : R.M - 11;
+  const fim = Math.max(R.M, MES_ATUAL);
+  let h = `<div class="secao"><div class="secao-cab"><h2>Taxa Selic usada no cálculo</h2>
+    <p>${S.selicFonte === 'bcb' ? 'Fonte: Banco Central, série 4390 (Selic acumulada no mês)' : 'Sem conexão: usando a tabela interna'} · <button class="btn-link" id="btnRecarregar">consultar de novo</button></p></div>
+    <p class="muted" style="margin:0 0 10px;font-size:12px">Digite um valor para substituir a taxa de um mês (por exemplo, quando a Selic do mês ainda não saiu). Deixe em branco para voltar ao valor oficial.</p>
+    <div class="tw"><table style="max-width:620px"><thead><tr><th>Mês</th><th class="num">Oficial</th><th class="num">Usada</th><th>Origem</th></tr></thead><tbody>`;
+  for (let i = fim; i >= ini; i--) {
+    const k = mChave(i);
+    const of = S.selicBCB ? S.selicBCB[k] : null;
+    const man = S.manual[k];
+    let origem;
+    if (man != null) origem = '<span class="tag warn">manual</span>';
+    else if (of != null) origem = '<span class="tag ok">oficial</span>';
+    else origem = `<span class="tag neu">${i >= MES_ATUAL ? 'mês não encerrado' : 'sem taxa'} · usa 1%</span>`;
+    h += `<tr class="${i === R.M ? 'atual' : ''}"><td>${mCurto(i)}</td><td class="num">${of != null ? pct(of) : '—'}</td>
+      <td class="num"><input class="selic-in ${man != null ? 'manual' : ''}" data-selic="${k}" inputmode="decimal" value="${man != null ? _n2.format(man / 100) : ''}" placeholder="${_n2.format((of != null ? of : BP_MES_PAGTO) / 100)}" aria-label="Selic de ${mCurto(i)}"></td>
+      <td>${origem}</td></tr>`;
+  }
+  h += `</tbody></table></div>`;
+  if (Object.keys(S.manual).length) h += `<p style="margin:10px 0 0"><button class="btn" id="btnLimparManual">Remover todos os ajustes manuais</button></p>`;
+  return h + '</div>';
+}
+
+// ---------------------------------------------------------------------------
+// Exportação para Excel
+// ---------------------------------------------------------------------------
+async function exportarExcel() {
+  if (typeof ExcelJS === 'undefined') { mensagem('Não foi possível carregar o gerador de Excel (verifique a conexão com a internet).', 'erro'); return; }
+  const { buf, nome } = await montarExcel();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+async function montarExcel() {
+  const R = calcular();
+  const rel = S.rel;
+  const M = R.M;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Lançamento de Multa e Juros';
+  wb.created = new Date();
+
+  const VERDE = 'FF0B6B57', CINZA = 'FFF2F4F6', AMARELO = 'FFFFF4C2';
+  const F_BRL = '"R$" #,##0.00;[Red]-"R$" #,##0.00';
+  const F_PCT = '0.00%';
+  const fino = { style: 'thin', color: { argb: 'FFC9CED4' } };
+  const borda = { top: fino, left: fino, bottom: fino, right: fino };
+  const usados = new Set();
+  const nomeAba = n => {
+    let base = n.replace(/[\\/?*[\]:]/g, '-').slice(0, 31), s = base, k = 2;
+    while (usados.has(s.toLowerCase())) s = `${base.slice(0, 27)} (${k++})`;
+    usados.add(s.toLowerCase());
+    return s;
+  };
+  const cabecalho = (row) => {
+    row.eachCell(c => {
+      c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERDE } };
+      c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      c.border = borda;
+    });
+    row.height = 30;
+  };
+  const corpo = (row, fmts) => {
+    row.eachCell({ includeEmpty: true }, (c, n) => { c.border = borda; if (fmts[n - 1]) c.numFmt = fmts[n - 1]; });
+  };
+  const total = (row, fmts) => {
+    corpo(row, fmts);
+    row.eachCell(c => { c.font = { bold: true }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CINZA } }; });
+  };
+  const destacar = row => row.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMARELO } }; });
+  const v = c => c / 100;
+  const p = bp => bp / 10000;
+  const dataExcel = n => { const [y, m, d] = dparts(n); return new Date(Date.UTC(y, m - 1, d)); };
+
+  // 1) Lançamento do mês
+  const ws = wb.addWorksheet(nomeAba(`Lançamento ${mNum(M).replace('/', '-')}`));
+  ws.columns = [{ width: 16 }, { width: 11 }, { width: 12 }, { width: 15 }, { width: 9 }, { width: 10 }, { width: 14 }, { width: 9 }, { width: 14 }, { width: 15 }, { width: 15 }, { width: 15 }];
+  ws.mergeCells('A1:L1');
+  ws.getCell('A1').value = `LANÇAMENTO DE MULTA E JUROS — ${mLongo(M).toUpperCase()}`;
+  ws.getCell('A1').font = { bold: true, size: 14, color: { argb: VERDE } };
+  ws.getCell('A2').value = `Empresa: ${rel.empresa}   CNPJ: ${rel.cnpj || rel.raiz}`;
+  ws.getCell('A3').value = `Relatório de Situação Fiscal emitido em ${rel.emissao ? dfmt(rel.emissao) : '—'} · contados todos os dias de ${mLongo(M).toLowerCase()} · gerado em ${new Date().toLocaleString('pt-BR')}`;
+  ws.getCell('A3').font = { italic: true, color: { argb: 'FF5E6772' } };
+
+  ws.getCell('A5').value = 'RESUMO PARA O LANÇAMENTO CONTÁBIL';
+  ws.getCell('A5').font = { bold: true };
+  cabecalho(ws.addRow(['Tributo', 'Multa do mês', 'Juros do mês', 'Total do mês', 'Multa acumulada', 'Juros acumulados']));
+  const fR = [null, F_BRL, F_BRL, F_BRL, F_BRL, F_BRL];
+  for (const t of R.porTributo) corpo(ws.addRow([t.tributo, v(t.multa), v(t.juros), v(t.multa + t.juros), v(t.multaAcum), v(t.jurosAcum)]), fR);
+  const T = R.totais;
+  total(ws.addRow(['TOTAL', v(T.multa), v(T.juros), v(T.multa + T.juros), v(T.multaAcum), v(T.jurosAcum)]), fR);
+
+  ws.addRow([]);
+  ws.addRow(['POR COMPETÊNCIA']).getCell(1).font = { bold: true };
+  cabecalho(ws.addRow(['Tributo', 'Comp.', 'Vencimento', 'Principal', 'Dias no mês', '% Multa no mês', 'Multa do mês', 'Selic do mês', 'Juros do mês', 'Total do mês', 'Multa acumulada', 'Juros acumulados']));
+  const fC = [null, null, 'dd/mm/yyyy', F_BRL, '0', F_PCT, F_BRL, F_PCT, F_BRL, F_BRL, F_BRL, F_BRL];
+  for (const g of R.grupos) {
+    const l = g.mesLanc;
+    corpo(ws.addRow([g.rotulo, g.pa, dataExcel(g.venc), v(g.base), l.dias, p(l.bpMulta), v(l.multa), l.origem === 'venc' ? null : p(l.bpSelic), v(l.juros), v(l.multa + l.juros), v(l.multaAcum), v(l.jurosAcum)]), fC);
+  }
+  total(ws.addRow(['TOTAL', null, null, v(T.base), null, null, v(T.multa), null, v(T.juros), v(T.multa + T.juros), v(T.multaAcum), v(T.jurosAcum)]), fC);
+  if (R.estimadas.length) {
+    ws.addRow([]);
+    ws.addRow([`Atenção: Selic de ${R.estimadas.map(mCurto).join(', ')} ainda não divulgada — usado 1%.`]).getCell(1).font = { italic: true, color: { argb: 'FF8A5300' } };
+  }
+
+  // 2) Separado por mês
+  const we = wb.addWorksheet(nomeAba('Separado por mês'));
+  const cabE = ['Mês'];
+  for (const t of R.listaTrib) cabE.push(`${t} multa`, `${t} juros`);
+  cabE.push('Total multa', 'Total juros', 'Total');
+  we.columns = cabE.map((_, i) => ({ width: i === 0 ? 11 : 14 }));
+  cabecalho(we.addRow(cabE));
+  const fE = cabE.map((_, i) => i === 0 ? 'mmm/yyyy' : F_BRL);
+  for (const e of R.evolucao) {
+    const row = [dataExcel(mIni(e.mes))];
+    for (const t of R.listaTrib) row.push(v(e.trib[t].multa), v(e.trib[t].juros));
+    row.push(v(e.multa), v(e.juros), v(e.multa + e.juros));
+    const r = we.addRow(row);
+    corpo(r, fE);
+    if (e.mes === M) destacar(r);
+  }
+  const rowT = ['TOTAL'];
+  for (const t of R.listaTrib) { const tt = R.porTributo.find(x => x.tributo === t); rowT.push(v(tt.multaAcum), v(tt.jurosAcum)); }
+  rowT.push(v(T.multaAcum), v(T.jurosAcum), v(T.multaAcum + T.jurosAcum));
+  total(we.addRow(rowT), fE);
+  we.views = [{ state: 'frozen', ySplit: 1, xSplit: 1 }];
+
+  // 3) Uma aba por débito, no modelo da planilha de atualização
+  for (const g of R.grupos) {
+    const wd = wb.addWorksheet(nomeAba(`${g.rotulo} ${g.pa.replace('/', '-')}`));
+    wd.columns = [{ width: 12 }, { width: 15 }, { width: 11 }, { width: 15 }, { width: 15 }, { width: 18 }];
+    wd.mergeCells('A1:F1');
+    const t1 = wd.getCell('A1');
+    t1.value = 'ATUALIZAÇÃO DE JUROS E MULTAS';
+    t1.font = { bold: true, size: 13, color: { argb: 'FFFFFFFF' } };
+    t1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERDE } };
+    t1.alignment = { horizontal: 'center' };
+    const r2 = wd.getRow(2);
+    r2.getCell(1).value = g.codigos.join(', ');
+    r2.getCell(2).value = g.rotulo;
+    r2.getCell(4).value = `COMP. ${g.pa}`;
+    r2.getCell(5).value = v(g.base);
+    r2.getCell(5).numFmt = F_BRL;
+    r2.getCell(6).value = `Venc: ${dfmt(g.venc)}`;
+    r2.font = { bold: true };
+    const cab = wd.getRow(3);
+    cab.values = ['MÊS', 'Dias em atraso', '% Multa', 'Vlr da Multa', 'Selic', 'Vlr dos Juros'];
+    cabecalho(cab);
+    const fD = ['mmm/yy', '0', F_PCT, F_BRL, F_PCT, F_BRL];
+    let ln = 4;
+    for (const l of g.linhas) {
+      const r = wd.getRow(ln++);
+      r.values = [dataExcel(mIni(l.mes)), l.dias, p(l.bpMulta), v(l.multa), l.origem === 'venc' ? null : p(l.bpSelic), v(l.juros)];
+      corpo(r, fD);
+      if (l.mes === M) destacar(r);
+      if (l.origem === 'estimada') r.getCell(5).note = 'Selic do mês ainda não divulgada: usado 1%';
+    }
+    const ult = g.mesLanc;
+    const a = 4, b = ln - 1;
+    const rt = wd.getRow(ln++);
+    rt.values = ['TOTAL', { formula: `SUM(B${a}:B${b})`, result: ult.diasAcum }, { formula: `SUM(C${a}:C${b})`, result: p(ult.bpMultaAcum) },
+      { formula: `SUM(D${a}:D${b})`, result: v(ult.multaAcum) }, { formula: `SUM(E${a}:E${b})`, result: p(ult.bpJurosAcum) }, { formula: `SUM(F${a}:F${b})`, result: v(ult.jurosAcum) }];
+    total(rt, fD);
+    ln++;
+    const resumo = [['Principal', v(g.base)], ['Multa', v(ult.multaAcum)], ['Juros', v(ult.jurosAcum)], ['Total atualizado', v(g.base + ult.multaAcum + ult.jurosAcum)]];
+    for (const [rot, val] of resumo) {
+      const r = wd.getRow(ln++);
+      r.getCell(5).value = rot; r.getCell(6).value = val; r.getCell(6).numFmt = F_BRL;
+      r.getCell(5).font = { bold: rot === 'Total atualizado' }; r.getCell(6).font = { bold: rot === 'Total atualizado' };
+    }
+    if (g.debitos.length > 1) {
+      ln++;
+      wd.getRow(ln++).getCell(1).value = 'Composição por código de receita';
+      wd.getRow(ln - 1).getCell(1).font = { bold: true };
+      const rc = wd.getRow(ln++);
+      rc.values = ['Código', 'Receita', 'Saldo devedor', 'Multa acum.', 'Juros acum.'];
+      cabecalho(rc);
+      for (const x of g.debitos) {
+        const u = x.linhas[x.linhas.length - 1];
+        const r = wd.getRow(ln++);
+        r.values = [x.d.codigo, x.d.receita, v(x.d.base), v(u.multaAcum), v(u.jurosAcum)];
+        corpo(r, [null, null, F_BRL, F_BRL, F_BRL]);
+      }
+    }
+  }
+
+  // 4) Débitos do relatório
+  const wr = wb.addWorksheet(nomeAba('Débitos do relatório'));
+  wr.columns = [{ width: 10 }, { width: 34 }, { width: 20 }, { width: 10 }, { width: 16 }, { width: 10 }, { width: 12 }, { width: 14 }, { width: 14 }, { width: 13 }, { width: 13 }, { width: 13 }, { width: 24 }];
+  cabecalho(wr.addRow(['Incluído', 'Seção', 'CNPJ', 'Código', 'Receita', 'PA', 'Vencimento', 'Vl. original', 'Saldo devedor', 'Multa RFB', 'Juros RFB', 'Conferência', 'Situação']));
+  const fRel = [null, null, null, null, null, null, 'dd/mm/yyyy', F_BRL, F_BRL, F_BRL, F_BRL, null, null];
+  for (const d of rel.debitos) {
+    const c = conferir(d, rel.emissao);
+    corpo(wr.addRow([incluido(d) ? 'Sim' : 'Não', d.secao, d.estab, d.codigo, d.receita, d.pa, dataExcel(d.venc), v(d.original), v(d.base),
+      d.multaRFB != null ? v(d.multaRFB) : null, d.jurosRFB != null ? v(d.jurosRFB) : null, c ? (c.ok ? 'confere' : c.falta ? 'falta Selic' : 'difere') : '', d.situacao]), fRel);
+  }
+
+  // 5) Selic
+  const wsS = wb.addWorksheet(nomeAba('Selic'));
+  wsS.columns = [{ width: 11 }, { width: 10 }, { width: 34 }];
+  cabecalho(wsS.addRow(['Mês', 'Taxa', 'Origem']));
+  const meses = new Map();
+  for (const g of R.grupos) for (const l of g.linhas) if (l.origem !== 'venc') meses.set(l.mes, l);
+  const nomesOrigem = { bcb: 'Banco Central (série 4390)', manual: 'Ajuste manual', estimada: '1% — Selic ainda não divulgada', pagto: '1% — mês do pagamento' };
+  for (const [i, l] of [...meses.entries()].sort((a, b) => a[0] - b[0])) {
+    corpo(wsS.addRow([dataExcel(mIni(i)), p(l.bpSelic), nomesOrigem[l.origem] || l.origem]), ['mmm/yyyy', F_PCT, null]);
+  }
+
+  const buf = await wb.xlsx.writeBuffer();
+  const nome = `Multa_Juros_${(rel.cnpj || rel.raiz).replace(/\D/g, '')}_${mNum(M).replace('/', '-')}.xlsx`;
+  return { buf, nome };
+}
+
+// ---------------------------------------------------------------------------
+// Eventos
+// ---------------------------------------------------------------------------
+const up = $('upload'), inp = $('arquivo');
+up.addEventListener('click', () => inp.click());
+up.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } });
+inp.addEventListener('change', () => { processarArquivo(inp.files[0]); inp.value = ''; });
+up.addEventListener('dragover', e => { e.preventDefault(); up.classList.add('over'); });
+up.addEventListener('dragleave', () => up.classList.remove('over'));
+up.addEventListener('drop', e => { e.preventDefault(); up.classList.remove('over'); processarArquivo(e.dataTransfer.files[0]); });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) processarArquivo(e.dataTransfer.files[0]); });
+
+$('mes').addEventListener('change', e => {
+  const [y, m] = (e.target.value || '').split('-').map(Number);
+  if (y && m) { S.mes = midx(y, m); render(); }
+});
+for (const b of document.querySelectorAll('[data-passo]')) b.addEventListener('click', () => { S.mes += Number(b.dataset.passo); render(); });
+$('optINSS').addEventListener('change', e => { S.cfg.agruparINSS = e.target.checked; salvarPrefs(); render(); });
+$('optSusp').addEventListener('change', e => {
+  S.cfg.incluirSusp = e.target.checked;
+  for (const d of S.rel.debitos) if (d.suspensa) d.incluir = null;
+  salvarPrefs(); render();
+});
+$('opt1').addEventListener('change', e => { S.cfg.umPorCento = e.target.checked; salvarPrefs(); render(); });
+$('btnExcel').addEventListener('click', async e => {
+  const b = e.currentTarget; b.disabled = true;
+  try { await exportarExcel(); } catch (err) { console.error(err); mensagem('Erro ao gerar o Excel: ' + esc(err.message || err), 'erro'); }
+  b.disabled = false;
+});
+$('btnPrint').addEventListener('click', () => window.print());
+$('abas').addEventListener('click', e => { const b = e.target.closest('[data-aba]'); if (b) { S.aba = b.dataset.aba; render(); } });
+
+$('conteudo').addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.deb != null) {
+    const d = S.rel.debitos[Number(t.dataset.deb)];
+    d.incluir = t.checked;
+    render();
+  } else if (t.dataset.selic) {
+    const txt = t.value.trim().replace('%', '').replace(/\./g, '').replace(',', '.');
+    if (txt === '') delete S.manual[t.dataset.selic];
+    else {
+      const n = parseFloat(txt);
+      if (!isFinite(n) || n < 0 || n > 20) { t.value = ''; return; }
+      S.manual[t.dataset.selic] = Math.round(n * 100);
+    }
+    salvarPrefs(); render();
+  }
+});
+$('conteudo').addEventListener('click', e => {
+  if (e.target.id === 'btnRecarregar') carregarSelic();
+  if (e.target.id === 'btnLimparManual') { S.manual = {}; salvarPrefs(); render(); }
+});
+
+carregarSelic();
+</script>
+</body>
+</html>
